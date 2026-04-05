@@ -9,6 +9,7 @@ const cors = require('cors');
 const config = require('./config');
 const logger = require('./utils/logger');
 const trafficMonitor = require('./services/trafficMonitor');
+const paymentService = require('./services/paymentService');
 
 // Инициализируем приложение
 const app = express();
@@ -85,6 +86,14 @@ app.listen(PORT, async () => {
   } catch (error) {
     logger.error('Failed to start traffic monitor:', error);
   }
+  
+  // Запуск опроса платежей (каждые 2 минуты)
+  setInterval(() => {
+    paymentService.pollPendingPayments().catch(error => {
+      logger.error('Payment poll error:', error);
+    });
+  }, 2 * 60 * 1000);
+  logger.info('💳 Payment poller started (every 2 min)');
 });
 
 // Graceful shutdown
