@@ -6,6 +6,7 @@
 const { Telegraf } = require('telegraf');
 const config = require('./config');
 const logger = require('./utils/logger');
+const xrayService = require('./services/xrayService');
 
 // Импорт обработчиков
 const startHandler = require('./handlers/start');
@@ -24,13 +25,12 @@ bot.use(async (ctx, next) => {
   await next();
 });
 
-// Middleware: проверка авторизации (можно расширить)
+// Middleware: проверка авторизации
 bot.use(async (ctx, next) => {
   const telegramId = ctx.from.id;
   const isAdmin = config.telegram.adminIds.includes(telegramId);
   
   if (!isAdmin) {
-    // Пока что только админы, потом добавим регистрацию
     await ctx.reply('⛔️ Бот доступен только администраторам (пока в разработке)');
     return;
   }
@@ -51,15 +51,27 @@ bot.on('text', (ctx) => {
   ctx.reply('Неизвестная команда. Используйте /help');
 });
 
-// Запуск бота
-bot.launch()
-  .then(() => {
-    logger.info('✅ Telegram bot started');
-  })
-  .catch(error => {
-    logger.error('❌ Failed to start bot:', error);
+// Запуск бота с инициализацией Xray
+async function startBot() {
+  try {
+    // Инициализируем Xray Service
+    await xrayService.init();
+    
+    bot.launch()
+      .then(() => {
+        logger.info('✅ Telegram bot started');
+      })
+      .catch(error => {
+        logger.error('❌ Failed to start bot:', error);
+        process.exit(1);
+      });
+  } catch (error) {
+    logger.error('❌ Failed to initialize services:', error);
     process.exit(1);
-  });
+  }
+}
+
+startBot();
 
 // Graceful shutdown
 process.once('SIGINT', () => bot.stop('SIGINT'));

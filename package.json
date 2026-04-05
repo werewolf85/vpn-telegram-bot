@@ -8,9 +8,10 @@
     "start": "node src/server.js",
     "bot": "node src/bot.js",
     "db:init": "node scripts/init-db.js",
-    "db:migrate": "node src/db/migrate.js",
+    "xray:keys": "node scripts/generate-reality-keys.js",
+    "xray:install": "bash scripts/install-xray.sh",
     "test": "jest",
-    "deploy": "deploy_git . ~/deploys/vpn-bot https://github.com/USERNAME/REPO.git main"
+    "deploy": "git add . && git commit -m \"Шаг N: описание\" && git push origin main"
   },
   "keywords": [
     "vpn",

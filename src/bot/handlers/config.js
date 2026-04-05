@@ -9,64 +9,78 @@ async function configHandler(ctx) {
   const user = ctx.from;
   
   try {
-    // Получаем пользователя
-    const dbUser = await userService.getUserByTelegramId(user.id);
-    if (!dbUser) {
-      await ctx.reply('❌ Пользователь не найден. Начните с /start');
-      return;
-    }
+    const dbUser = await userService.getOrCreateUser(user.id, user.username, user.first_name, user.last_name);
     
-    // Получаем доступные серверы
-    const servers = await db.any(
-      'SELECT * FROM servers WHERE enabled = TRUE ORDER BY load_percent ASC LIMIT 5'
-    );
+    // Проверяем, есть ли уже аккаунт (берем первый)
+    const existingAccounts = await userService.getUserAccounts(dbUser.id);
     
-    if (servers.length === 0) {
-      await ctx.reply('❌ Нет доступных серверов. Обратитесь к администратору.');
-      return;
-    }
-    
-    // Проверяем, есть ли уже аккаунт
-    const accounts = await userService.getUserAccounts(dbUser.id);
-    
-    if (accounts.length > 0) {
-      // Уже есть аккаунт — показываем конфиг
-      const account = accounts[0];
-      const vlessUrl = `vless://${account.uuid}@${account.ip}:${account.port}?encryption=none&flow=xtls-rprx-vision&security=reality&pbk=${account.reality_pubkey}&sni=${account.reality_shortid}&shortId=${account.reality_shortid}#VPN`;
+    if (existingAccounts.length > 0) {
+      // Аккаунт уже есть — показываем конфиг
+      const account = existingAccounts[0];
+      const server = await db.one('SELECT * FROM servers WHERE id = $1', [account.server_id]);
+      
+      const vlessUrl = `vless://${account.uuid}@${server.ip}:${server.port}?encryption=none&flow=xtls-rprx-vision&security=reality&pbk=${server.reality_pubkey}&sni=${server.reality_shortid}&shortId=${server.reality_shortid}#VPN`;
       
       await ctx.reply(
         `🔐 <b>Ваш VPN конфиг</b>\n\n` +
-        `Сервер: ${account.server_name} (${account.country})\n` +
-        `IP: ${account.ip}\n` +
-        `UUID: ${account.uuid}\n\n` +
+        `Сервер: ${server.name} (${server.country})\n` +
+        `IP: ${server.ip}:${server.port}\n` +
+        `UUID: ${account.uuid}\n` +
+        `Трафик: ${(account.traffic_used / (1024**3)).toFixed(2)} / ${(account.traffic_limit / (1024**3)).toFixed(2)} ГБ\n\n` +
         `🔗 <code>${vlessUrl}</code>\n\n` +
-        `Используйте эту ссылку в приложении V2RayNG / Shadowrocket.\n` +
-        `Трафик: ${(account.traffic_used / (1024**3)).toFixed(2)} / ${(account.traffic_limit / (1024**3)).toFixed(2)} ГБ`,
+        `📱 Импортируйте эту ссылку в V2RayNG / Shadowrocket`,
         { parse_mode: 'HTML' }
       );
-    } else {
-      // Нет аккаунта — предлагаем выбрать сервер
-      const keyboard = {
-        reply_markup: {
-          inline_keyboard: servers.map(s => [
-            {
-              text: `${s.name} (${s.country}) — нагрузка ${s.load_percent}%`,
-              callback_data: `select_server:${s.id}`
-            }
-          ])
-        }
-      };
-      
-      await ctx.reply(
-        '🚀 Выберите сервер для подключения:\n' +
-        servers.map(s => `${s.name} (${s.country}) — ${s.load_percent}%`).join('\n'),
-        keyboard
-      );
+      return;
     }
+    
+    // Нет аккаунта — выбираем сервер с минимальной нагрузкой
+    const servers = await db.any(
+      `SELECT s.* FROM servers s 
+       WHERE s.enabled = TRUE 
+       ORDER BY s.load_percent ASC, s.country 
+       LIMIT 3`
+    );
+    
+    if (servers.length === 0) {
+      await ctx.reply('❌ Нет доступных серверов.');
+      return;
+    }
+    
+    // Создаём аккаунт на лучшем сервере (первый)
+    const server = servers[0];
+    const defaultTrafficLimit = parseInt(process.env.DEFAULT_TRAFFIC_LIMIT_GB) || 100;
+    const defaultExpiryDays = parseInt(process.env.DEFAULT_EXPIRY_DAYS) || 30;
+    
+    const account = await userService.createAccount(
+      dbUser.id,
+      server.id,
+      defaultTrafficLimit,
+      defaultExpiryDays
+    );
+    
+    // Получаем обновлённые данные сервера (с REALITY ключами)
+    const serverWithKeys = await db.one('SELECT * FROM servers WHERE id = $1', [server.id]);
+    
+    const vlessUrl = `vless://${account.uuid}@${serverWithKeys.ip}:${serverWithKeys.port}?encryption=none&flow=xtls-rprx-vision&security=reality&pbk=${serverWithKeys.reality_pubkey}&sni=${serverWithKeys.reality_shortid}&shortId=${serverWithKeys.reality_shortid}#VPN`;
+    
+    await ctx.reply(
+      `✅ <b>Аккаунт создан!</b>\n\n` +
+      `Сервер: ${serverWithKeys.name} (${serverWithKeys.country})\n` +
+      `IP: ${serverWithKeys.ip}:${serverWithKeys.port}\n` +
+      `UUID: ${account.uuid}\n` +
+      `Трафик: ${(account.traffic_limit / (1024**3)).toFixed(2)} ГБ\n` +
+      `Срок: ${new Date(account.expires_at).toLocaleDateString('ru-RU')}\n\n` +
+      `🔗 <code>${vlessUrl}</code>\n\n` +
+      `📱 Импортируйте эту ссылку в V2RayNG / Shadowrocket.\n` +
+      `/balance — проверить баланс\n` +
+      `/traffic — статистика`,
+      { parse_mode: 'HTML' }
+    );
     
   } catch (error) {
     console.error('Error in /config:', error);
-    await ctx.reply('❌ Ошибка при получении конфига.');
+    await ctx.reply('❌ Ошибка при получении/создании конфигурации.');
   }
 }
 
