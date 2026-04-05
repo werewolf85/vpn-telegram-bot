@@ -8,6 +8,7 @@ const helmet = require('helmet');
 const cors = require('cors');
 const config = require('./config');
 const logger = require('./utils/logger');
+const trafficMonitor = require('./services/trafficMonitor');
 
 // Инициализируем приложение
 const app = express();
@@ -46,19 +47,29 @@ app.use((err, req, res, next) => {
 });
 
 // Запуск сервера
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   logger.info(`🚀 VPN Telegram Bot API started on port ${PORT}`);
   logger.info(`Environment: ${config.server.nodeEnv}`);
+  
+  // Запуск мониторинга трафика
+  try {
+    await trafficMonitor.start();
+    logger.info('📊 Traffic monitor started');
+  } catch (error) {
+    logger.error('Failed to start traffic monitor:', error);
+  }
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
   logger.info('SIGTERM received, shutting down gracefully');
+  trafficMonitor.stop();
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
   logger.info('SIGINT received, shutting down gracefully');
+  trafficMonitor.stop();
   process.exit(0);
 });
 

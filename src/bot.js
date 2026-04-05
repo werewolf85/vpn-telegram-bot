@@ -14,6 +14,7 @@ const balanceHandler = require('./handlers/balance');
 const configHandler = require('./handlers/config');
 const serversHandler = require('./handlers/servers');
 const trafficHandler = require('./handlers/traffic');
+const statusHandler = require('./handlers/status');
 
 // Инициализация бота
 const bot = new Telegraf(config.telegram.botToken);
@@ -44,7 +45,8 @@ bot.command('balance', balanceHandler);
 bot.command('config', configHandler);
 bot.command('servers', serversHandler);
 bot.command('traffic', trafficHandler);
-bot.command('help', (ctx) => ctx.reply('Доступные команды: /start /balance /config /servers /traffic'));
+bot.command('status', statusHandler);
+bot.command('help', (ctx) => ctx.reply('Доступные команды: /start /balance /config /servers /traffic /status'));
 
 // Обработка неизвестных команд
 bot.on('text', (ctx) => {
