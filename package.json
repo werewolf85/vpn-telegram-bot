@@ -1,7 +1,7 @@
 {
-  "name": "vpn-telegram-bot",
+  "name": "proxygate-vpn-bot",
   "version": "0.1.0",
-  "description": "VPN service managed via Telegram. REALITY obfuscation, USDT payments, traffic-based billing.",
+  "description": "ProxyGate — VPN Telegram Bot with REALITY obfuscation, USDT/RUB payments, traffic-based billing.",
   "main": "src/server.js",
   "scripts": {
     "dev": "nodemon src/server.js",
@@ -19,7 +19,8 @@
     "telegram-bot",
     "xray",
     "reality",
-    "usdt"
+    "usdt",
+    "proxygate"
   ],
   "author": "Proxima",
   "license": "MIT",
