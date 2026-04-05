@@ -38,11 +38,21 @@ module.exports = {
   },
   xray: {
     configPath: process.env.XRAY_CONFIG_PATH || '/etc/xray/config.json',
-    apiAddr: process.env.XRAY_API_ADDR || '127.0.0.1:10085'
+    apiAddr: process.env.XRAY_API_ADDR || '127.0.0.1:10085',
+    apiPort: parseInt(process.env.XRAY_API_PORT) || 10085
   },
-  crypto: {
-    cryptobotToken: process.env.CRYPTOBOT_TOKEN,
-    minDepositUsdt: parseFloat(process.env.MIN_DEPOSIT_USDT) || 1.0
+  
+  payments: {
+    cryptobot: {
+      token: process.env.CRYPTOBOT_TOKEN,
+      webhookUrl: process.env.CRYPTOBOT_WEBHOOK_URL
+    },
+    yoomoney: {
+      shopId: process.env.YOOMONEY_SHOP_ID,
+      secret: process.env.YOOMONEY_SECRET
+    },
+    minDepositUsdt: parseFloat(process.env.MIN_DEPOSIT_USDT) || 1.0,
+    minDepositRub: parseFloat(process.env.MIN_DEPOSIT_RUB) || 100.0
   },
   server: {
     port: parseInt(process.env.PORT, 10) || 3000,

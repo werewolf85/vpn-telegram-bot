@@ -15,6 +15,8 @@ const configHandler = require('./handlers/config');
 const serversHandler = require('./handlers/servers');
 const trafficHandler = require('./handlers/traffic');
 const statusHandler = require('./handlers/status');
+const depositHandler = require('./handlers/deposit');
+const paymentsHandler = require('./handlers/payments');
 
 // Инициализация бота
 const bot = new Telegraf(config.telegram.botToken);
@@ -46,7 +48,19 @@ bot.command('config', configHandler);
 bot.command('servers', serversHandler);
 bot.command('traffic', trafficHandler);
 bot.command('status', statusHandler);
-bot.command('help', (ctx) => ctx.reply('Доступные команды: /start /balance /config /servers /traffic /status'));
+bot.command('deposit', depositHandler);
+bot.command('payments', paymentsHandler);
+bot.command('help', (ctx) => ctx.reply(
+  'Доступные команды:\n' +
+  '/start — регистрация\n' +
+  '/config — получить/создать VPN\n' +
+  '/balance — баланс\n' +
+  '/traffic — статистика трафика\n' +
+  '/servers — список серверов\n' +
+  '/status — статус системы\n' +
+  '/deposit <сумма> [cryptobot|yoomoney] — пополнение\n' +
+  '/payments — история платежей'
+));
 
 // Обработка неизвестных команд
 bot.on('text', (ctx) => {

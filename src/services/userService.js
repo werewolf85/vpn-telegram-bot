@@ -120,10 +120,25 @@ class UserService {
    * Получить статистику пользователя
    */
   async getUserStats(userId) {
-    return await db.one(
-      `SELECT * FROM user_stats WHERE user_id = $1`,
-      [userId]
-    );
+    return await db.one(`
+      SELECT 
+        u.id,
+        u.telegram_id,
+        u.username,
+        u.first_name,
+        u.last_name,
+        u.created_at,
+        COALESCE(ub.balance_usdt, 0) as balance_usdt,
+        COALESCE(ub.balance_rub, 0) as balance_rub,
+        COUNT(a.id) FILTER (WHERE a.active = TRUE) as active_accounts,
+        COALESCE(SUM(a.traffic_limit), 0) as total_traffic_limit,
+        COALESCE(SUM(a.traffic_used), 0) as total_traffic_used
+      FROM users u
+      LEFT JOIN user_balance ub ON u.id = ub.user_id
+      LEFT JOIN accounts a ON u.id = a.user_id
+      WHERE u.id = $1
+      GROUP BY u.id, ub.balance_usdt, ub.balance_rub
+    `, [userId]);
   }
 }
 

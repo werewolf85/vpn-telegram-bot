@@ -51,6 +51,33 @@ app.listen(PORT, async () => {
   logger.info(`🚀 VPN Telegram Bot API started on port ${PORT}`);
   logger.info(`Environment: ${config.server.nodeEnv}`);
   
+  // Автоматическое применение миграций в development режиме
+  if (config.server.nodeEnv === 'development') {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const migrationsDir = path.join(__dirname, '..', 'db', 'migrations');
+      
+      if (fs.existsSync(migrationsDir)) {
+        const files = fs.readdirSync(migrationsDir)
+          .filter(f => f.endsWith('.sql'))
+          .sort();
+        
+        logger.info(`📦 Applying ${files.length} migrations...`);
+        
+        for (const file of files) {
+          const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
+          await db.raw(sql);
+          logger.info(`   ✅ ${file}`);
+        }
+        
+        logger.info('✅ All migrations applied');
+      }
+    } catch (error) {
+      logger.error('Failed to apply migrations:', error);
+    }
+  }
+  
   // Запуск мониторинга трафика
   try {
     await trafficMonitor.start();

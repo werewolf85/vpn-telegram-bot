@@ -8,6 +8,7 @@
     "start": "node src/server.js",
     "bot": "node src/bot.js",
     "db:init": "node scripts/init-db.js",
+    "db:migrate": "node scripts/migrate.js",
     "xray:keys": "node scripts/generate-reality-keys.js",
     "xray:install": "bash scripts/install-xray.sh",
     "test": "jest",
